@@ -60,11 +60,11 @@ static void mark_common(struct negotiation_state *ns, struct commit *commit,
 	commit_list_insert(commit, &stack);
 
 	while (stack) {
-		struct commit *c = stack->item;
+		struct commit *c = pop_commit(&stack);
 		struct object *o = (struct object *)c;
 
 		if (c == NULL || (c->object.flags & COMMON))
-			break;
+			continue;
 
 		if (!ancestors_only)
 			o->flags |= COMMON;
@@ -78,7 +78,7 @@ static void mark_common(struct negotiation_state *ns, struct commit *commit,
 				ns->non_common_revs--;
 			if (!o->parsed && !dont_parse)
 				if (repo_parse_commit(the_repository, c))
-					break;
+					continue;
 
 			parents = c->parents;
 			while (parents) {
@@ -88,9 +88,7 @@ static void mark_common(struct negotiation_state *ns, struct commit *commit,
 		}
 
 		ancestors_only = 0;
-		pop_commit(&stack);
 	}
-	free_commit_list(stack);
 }
 
 /*
