@@ -55,30 +55,42 @@ static int clear_marks(const char *refname, const struct object_id *oid,
 static void mark_common(struct negotiation_state *ns, struct commit *commit,
 		int ancestors_only, int dont_parse)
 {
-	if (commit != NULL && !(commit->object.flags & COMMON)) {
-		struct object *o = (struct object *)commit;
+	struct commit_list *stack = NULL;
+
+	commit_list_insert(commit, &stack);
+
+	while (stack) {
+		struct commit *c = stack->item;
+		struct object *o = (struct object *)c;
+
+		if (c == NULL || (c->object.flags & COMMON))
+			break;
 
 		if (!ancestors_only)
 			o->flags |= COMMON;
 
 		if (!(o->flags & SEEN))
-			rev_list_push(ns, commit, SEEN);
+			rev_list_push(ns, c, SEEN);
 		else {
 			struct commit_list *parents;
 
 			if (!ancestors_only && !(o->flags & POPPED))
 				ns->non_common_revs--;
 			if (!o->parsed && !dont_parse)
-				if (repo_parse_commit(the_repository, commit))
-					return;
+				if (repo_parse_commit(the_repository, c))
+					break;
 
-			for (parents = commit->parents;
-					parents;
-					parents = parents->next)
-				mark_common(ns, parents->item, 0,
-					    dont_parse);
+			parents = c->parents;
+			while (parents) {
+				commit_list_insert(parents->item, &stack);
+				parents = parents->next;
+			}
 		}
+
+		ancestors_only = 0;
+		pop_commit(&stack);
 	}
+	free_commit_list(stack);
 }
 
 /*
