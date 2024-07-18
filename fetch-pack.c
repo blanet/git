@@ -128,11 +128,6 @@ static struct commit *deref_without_lazy_fetch_extended(const struct object_id *
 							unsigned int oi_flags)
 {
 	struct object_info info = { .typep = type };
-	struct commit *commit;
-
-	commit = lookup_commit_in_graph(the_repository, oid);
-	if (commit)
-		return commit;
 
 	while (1) {
 		if (oid_object_info_extended(the_repository, oid, &info,
